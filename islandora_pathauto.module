@@ -112,8 +112,9 @@ function islandora_pathauto_create_alias($object, $op) {
  * Implements hook_islandora_object_ingested().
  */
 function islandora_pathauto_islandora_object_ingested($object) {
-  if( !path_load('islandora/object/' . $object -> id) )
+  if( !path_load('islandora/object/' . $object -> id) ){
     islandora_pathauto_create_alias($object, 'insert');
+  }
 }
 
 /**
@@ -131,7 +132,6 @@ function islandora_pathauto_islandora_object_alter($original, $context) {
       $object->label = $context['params']['label'];
     }
   }
-  //I'm thinking that line 136 is useless? Doesn't even update the alias
   islandora_pathauto_create_alias($object, 'update');
 }
 
@@ -251,7 +251,6 @@ function islandora_pathauto_tokens($type, $tokens, array $data = array(), array 
   }
   return array();
 }
-
 
 class IslandoraFedoraObjectReadOnly implements ArrayAccess {
   private $fake;
