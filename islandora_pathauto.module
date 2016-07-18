@@ -112,8 +112,8 @@ function islandora_pathauto_create_alias($object, $op) {
  * Implements hook_islandora_object_ingested().
  */
 function islandora_pathauto_islandora_object_ingested($object) {
-    if( !path_load('islandora/object/' . $object -> id) )
-        islandora_pathauto_create_alias($object, 'insert');
+  if( !path_load('islandora/object/' . $object -> id) )
+    islandora_pathauto_create_alias($object, 'insert');
 }
 
 /**
@@ -330,87 +330,80 @@ class IslandoraFedoraObjectReadOnly implements ArrayAccess {
  * the URL Alias.
  */
 function islandora_pathauto_form_alter(&$form , &$form_state, $form_id){
-    if( $form_id == 'islandora_object_properties_form' ){
-
-        if( !pathauto_pattern_load_by_entity('islandora') ){
-            $hidden = 'hidden';
-        }
-        else{
-            $hidden = 'checkbox';
-        }
-                
-        $generate_url = variable_get( 'set_generate', 0 );
-        
-        $form['check'] = array(
-            '#type'          => $hidden,
-            '#title'         => t('Generate automatic URL alias'),
-            '#default_value' => $generate_url,
-            '#description'   => t('Uncheck this to create a custom alias below.'),
-            '#weight'        => -1,
-        );
-        
-        $original_path = 'islandora/object/' . $form['pid']['#value'];
-        if( drupal_get_path_alias($original_path) === $original_path ){
-            $url_alias = '';
-        }
-        else{
-            $url_alias = drupal_get_path_alias($original_path);  
-        }
-        
-        $form['object_url'] = array(
-            '#title'         => t('URL Alias'),
-            '#default_value' => $url_alias,
-            '#required'      => FALSE,
-            '#description'   => t("An alternative URL Alias"),
-            '#type'          => 'textfield',
-            '#weight'        => -1,
-            '#states' => array(
-			"disabled" => array(
-                            "input[name='check']" => array("checked" => TRUE)),
-			),
-        );
-        array_push( $form['#submit'], 'islandora_pathauto_form_submit');
+  if ( $form_id == 'islandora_object_properties_form' ){
+    
+    if ( !pathauto_pattern_load_by_entity('islandora') ){
+      $hidden = 'hidden';
     }
+    else {
+      $hidden = 'checkbox';
+    }
+        
+    $form['check'] = array(
+      '#type'          => $hidden,
+      '#title'         => t('Generate automatic URL alias'),
+      '#default_value' => 0,
+      '#description'   => t('Uncheck this to create a custom alias below.'),
+      '#weight'        => -2,
+    );
+        
+    $original_path = 'islandora/object/' . $form['pid']['#value'];
+    if ( drupal_get_path_alias($original_path) === $original_path ){
+      $url_alias = '';
+    }
+    else {
+      $url_alias = drupal_get_path_alias($original_path);  
+    }
+        
+    $form['object_url'] = array(
+      '#title'         => t('URL Alias'),
+      '#default_value' => $url_alias,
+      '#required'      => FALSE,
+      '#description'   => t("An alternative URL Alias"),
+      '#type'          => 'textfield',
+      '#weight'        => -1,
+      '#states' => array(
+		"disabled" => array(
+                    "input[name='check']" => array("checked" => TRUE)),
+		   ),
+    );
+    array_push( $form['#submit'], 'islandora_pathauto_form_submit');
+  }
 }
 
 /*
  * Implements form_submit() for the Custom URL Alias Option
  * 
  * Submits the user's alias to change the islandora Object URL path
+ * If the checkbox is checked, it generates the automatic url aliases for the object's path
+ * Else if checkbox is not checked and the textfield is not empty, it creates the custom aliases
+ * 
  */
 function islandora_pathauto_form_submit($form, &$form_state) { 
-   $original_path = 'islandora/object/' . $form['pid']['#value'];
-    $new_path = path_load($original_path);
-    $new_path['alias'] = $form_state['values']['object_url'];
-    $new_path['source'] = $original_path;
-    
-    //If the checkbox is checked
-    if( $form_state['values']['check'] === 1){
-        $new_path['alias'] = 'myislandoraobjects/' . $form_state['values']['object_label'];
-        if ( !path_load( array( 'alias' => $new_path['alias'] )) || ($form_state['values']['object_url'] != $new_path['alias'])){
-            path_save( $new_path );
-            $generate_url = variable_set('set_generate', 1);
-            $form_state['redirect'] = array( $new_path['alias'] );
-        }
+  $original_path = 'islandora/object/' . $form['pid']['#value'];
+  $new_path = path_load($original_path);
+  $new_path['alias'] = $form_state['values']['object_url'];
+  $new_path['source'] = $original_path;
+
+  if ($form_state['values']['check'] === 1){
+    $islandora_object = islandora_object_load($form['pid']['#value']);
+    $new_path['alias'] = token_replace(pathauto_pattern_load_by_entity('islandora'), array( 'fedora' => $islandora_object ) );
+    if (!path_load( array( 'alias' => $new_path['alias'] )) || ($form_state['values']['object_url'] != $new_path['alias'])){
+      path_save( $new_path );
+      $form_state['redirect'] = array( $new_path['alias'] );
     }
-    
-    //Else if the checkbox is not checked and the URL alias is not empty
-    elseif( $form_state['values']['check'] === 0 && !empty($new_path['alias'])){
-        //If the alias doesn't already exists
-        if ( !path_load( array( 'alias' => $new_path['alias'] ))){
-            path_save( $new_path );
-            $generate_url = variable_set('set_generate', 0);
-            $form_state['redirect'] = array( $new_path['alias'] );
-        }
+  }
+  elseif ($form_state['values']['check'] === 0 && !empty($new_path['alias'])){
+    if (!path_load( array( 'alias' => $new_path['alias'] ))){
+      path_save( $new_path );
+      $form_state['redirect'] = array( $new_path['alias'] );
     }
-    
-    else{
-        path_save( $new_path );
-        $redirect_url = $form_state['values']['object_url']; 
-        $generate_url = variable_set('set_generate', 0);
-        $form_state['redirect'] = array( $original_path );
-    }
-    
+  }
+  else {
+    path_save( $new_path );
+    $redirect_url = $form_state['values']['object_url']; 
+    $form_state['redirect'] = array( $original_path );
+  }
 }
 
 
