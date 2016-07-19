@@ -112,7 +112,7 @@ function islandora_pathauto_create_alias($object, $op) {
  * Implements hook_islandora_object_ingested().
  */
 function islandora_pathauto_islandora_object_ingested($object) {
-  if( !path_load('islandora/object/' . $object -> id) ){
+  if (!path_load('islandora/object/' . $object->id)) {
     islandora_pathauto_create_alias($object, 'insert');
   }
 }
@@ -386,7 +386,9 @@ function islandora_pathauto_form_submit($form, &$form_state) {
 
   if ($form_state['values']['check'] === 1){
     $islandora_object = islandora_object_load($form['pid']['#value']);
-    $new_path['alias'] = token_replace(pathauto_pattern_load_by_entity('islandora'), array( 'fedora' => $islandora_object ) );
+    $all_enabled = variable_get('islandora_pathauto_selected_cmodels', 0);
+    $pattern = pathauto_pattern_load_by_entity('islandora', $all_enabled[0] );
+    $new_path['alias'] = token_replace( $pattern, array('fedora' => $islandora_object ) );
     if (!path_load( array( 'alias' => $new_path['alias'] )) || ($form_state['values']['object_url'] != $new_path['alias'])){
       path_save( $new_path );
       $form_state['redirect'] = array( $new_path['alias'] );
