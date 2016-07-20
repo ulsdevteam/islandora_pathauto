@@ -329,9 +329,9 @@ class IslandoraFedoraObjectReadOnly implements ArrayAccess {
  * the URL Alias.
  */
 function islandora_pathauto_form_alter(&$form , &$form_state, $form_id){
-  if ( $form_id == 'islandora_object_properties_form' ){
+  if ($form_id == 'islandora_object_properties_form') {
     
-    if ( !pathauto_pattern_load_by_entity('islandora') ){
+    if (!pathauto_pattern_load_by_entity('islandora')) {
       $hidden = 'hidden';
     }
     else {
@@ -347,7 +347,7 @@ function islandora_pathauto_form_alter(&$form , &$form_state, $form_id){
     );
         
     $original_path = 'islandora/object/' . $form['pid']['#value'];
-    if ( drupal_get_path_alias($original_path) === $original_path ){
+    if (drupal_get_path_alias($original_path) === $original_path) {
       $url_alias = '';
     }
     else {
@@ -366,7 +366,7 @@ function islandora_pathauto_form_alter(&$form , &$form_state, $form_id){
                     "input[name='check']" => array("checked" => TRUE)),
 		   ),
     );
-    array_push( $form['#submit'], 'islandora_pathauto_form_submit');
+    array_push($form['#submit'], 'islandora_pathauto_form_submit');
   }
 }
 
@@ -384,18 +384,18 @@ function islandora_pathauto_form_submit($form, &$form_state) {
   $new_path['alias'] = $form_state['values']['object_url'];
   $new_path['source'] = $original_path;
 
-  if ($form_state['values']['check'] === 1){
+  if ($form_state['values']['check'] === 1) {
     $islandora_object = islandora_object_load($form['pid']['#value']);
     $all_enabled = variable_get('islandora_pathauto_selected_cmodels', 0);
     $pattern = pathauto_pattern_load_by_entity('islandora', $all_enabled[0] );
     $new_path['alias'] = token_replace( $pattern, array('fedora' => $islandora_object ) );
-    if (!path_load( array( 'alias' => $new_path['alias'] )) || ($form_state['values']['object_url'] != $new_path['alias'])){
+    if (!path_load( array( 'alias' => $new_path['alias'] )) || ($form_state['values']['object_url'] != $new_path['alias'])) {
       path_save( $new_path );
       $form_state['redirect'] = array( $new_path['alias'] );
     }
   }
-  elseif ($form_state['values']['check'] === 0 && !empty($new_path['alias'])){
-    if (!path_load( array( 'alias' => $new_path['alias'] ))){
+  elseif ($form_state['values']['check'] === 0 && !empty($new_path['alias'])) {
+    if (!path_load( array( 'alias' => $new_path['alias'] ))) {
       path_save( $new_path );
       $form_state['redirect'] = array( $new_path['alias'] );
     }
