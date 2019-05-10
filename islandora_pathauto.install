@@ -1,0 +1,49 @@
+<?php
+
+/**
+ * @file
+ * Implementations of installation hooks.
+ */
+function islandora_pathauto_install(){
+    drupal_install_schema('islandora_pathauto_state');
+}
+/**
+ * Implements hook_uninstall().
+ *
+ * Delete module variables.
+ */
+function islandora_pathauto_uninstall() {
+  $variables = array(
+    'islandora_pathauto_use_cron',
+    'islandora_pathauto_selected_cmodels',
+  );
+  array_walk($variables, 'variable_del');
+}
+
+
+
+/**
+ * Create Islandora_pathauto_state table to see if this url can be replaced
+ */
+function islandora_pathauto_state_schema(){
+    #TODO: Create a table
+    $schema['islandora_pathauto_state'] = array(
+        'description' => t('Stores whether this object should be effected by'
+                . 'Islandora_pathauto'),
+        'fields' => array(
+            'object_id' => array(
+                'description' => 'Islandora Object ID for Identifying',
+                'type' => 'varchar',
+                'length' => '64',
+                'not null' => TRUE
+            ),
+            'islandora_pathauto_state' = > array(
+                'description' => '1 for use auto alias 0 for dont use',
+                'type' => 'int',
+                'unsigned' => TRUE,
+                'default' => 1,
+            )
+        )
+    );
+    return $schema;
+}
