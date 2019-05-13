@@ -456,7 +456,7 @@ function islandora_pathauto_pathauto_bulkupdate(&$context) {
 function islandora_pathauto_load_pathauto_objects(){
     $results = [];
     if(db_table_exists('islandora_pathauto_state')){
-        $results = db_query('SELECT object_id , pathauto_state FROM FROM {islandora_pathauto_state}');
+        #$results = db_query('SELECT object_id , pathauto_state FROM FROM {islandora_pathauto_state}');
     }
     else{
         _islandora_pathauto_create_pathauto_state();
