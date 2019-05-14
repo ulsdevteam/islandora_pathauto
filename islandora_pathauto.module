@@ -14,72 +14,72 @@
  * Implements hook_menu().
  */
 function islandora_pathauto_menu() {
-  $items['admin/islandora/tools/islandora-pathauto'] = array(
-    'title' => 'Pathauto',
-    'description' => 'Configure settings for the Islandora Pathauto module.',
-    'page callback' => 'drupal_get_form',
-    'page arguments' => array('islandora_pathauto_admin_settings'),
-    'access arguments' => array('administer islandora_pathauto'),
-    'file' => 'includes/admin.form.inc',
-    'type' => MENU_NORMAL_ITEM,
-  );
-  return $items;
+    $items['admin/islandora/tools/islandora-pathauto'] = array(
+        'title' => 'Pathauto',
+        'description' => 'Configure settings for the Islandora Pathauto module.',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('islandora_pathauto_admin_settings'),
+        'access arguments' => array('administer islandora_pathauto'),
+        'file' => 'includes/admin.form.inc',
+        'type' => MENU_NORMAL_ITEM,
+    );
+    return $items;
 }
 
 /**
  * Implements hook_permission().
  */
 function islandora_pathauto_permission() {
-  return array(
-    'administer islandora_pathauto' => array(
-      'title' => t('Administer Islandora Pathauto'),
-      'description' => t('Select content models available for custom Islandora Pathauto patterns.'),
-    ),
-  );
+    return array(
+        'administer islandora_pathauto' => array(
+            'title' => t('Administer Islandora Pathauto'),
+            'description' => t('Select content models available for custom Islandora Pathauto patterns.'),
+        ),
+    );
 }
 
 /**
  * Implements hook_theme().
  */
 function islandora_pathauto_theme() {
-  return array(
-    'islandora_pathauto_admin_table' => array(
-      'render element' => 'form',
-    ),
-  );
+    return array(
+        'islandora_pathauto_admin_table' => array(
+            'render element' => 'form',
+        ),
+    );
 }
 
 /**
  * Implements hook_pathauto().
  */
 function islandora_pathauto_pathauto($op) {
-  switch ($op) {
-    case 'settings':
-      module_load_include('inc', 'islandora', 'includes/utilities');
-      $settings = new stdClass();
-      $settings->module = 'islandora';
-      $settings->groupheader = t('Islandora object paths');
-      $settings->patterndescr = t('All Islandora objects (except those with custom paths specified below)');
-      $settings->patterndefault = '';
-      $settings->token_type = 'fedora';
-      $settings->patternitems = array();
-      $settings->batch_update_callback = 'islandora_pathauto_pathauto_bulkupdate';
-      $all_cmodels = islandora_get_content_models();
-      $pathauto_cmodels = variable_get('islandora_pathauto_selected_cmodels', array());
-      $cmodels = array();
-      foreach ($all_cmodels as $key => $value) {
-        if (in_array($key, $pathauto_cmodels)) {
-          $cmodels[$key] = $value;
-        }
-      }
-      foreach ($cmodels as $cmodel) {
-        $settings->patternitems[$cmodel['pid']] = t('Custom pattern for @cmodel objects', array("@cmodel" => $cmodel['label']));
-      }
-      return $settings;
+    switch ($op) {
+        case 'settings':
+            module_load_include('inc', 'islandora', 'includes/utilities');
+            $settings = new stdClass();
+            $settings->module = 'islandora';
+            $settings->groupheader = t('Islandora object paths');
+            $settings->patterndescr = t('All Islandora objects (except those with custom paths specified below)');
+            $settings->patterndefault = '';
+            $settings->token_type = 'fedora';
+            $settings->patternitems = array();
+            $settings->batch_update_callback = 'islandora_pathauto_pathauto_bulkupdate';
+            $all_cmodels = islandora_get_content_models();
+            $pathauto_cmodels = variable_get('islandora_pathauto_selected_cmodels', array());
+            $cmodels = array();
+            foreach ($all_cmodels as $key => $value) {
+                if (in_array($key, $pathauto_cmodels)) {
+                    $cmodels[$key] = $value;
+                }
+            }
+            foreach ($cmodels as $cmodel) {
+                $settings->patternitems[$cmodel['pid']] = t('Custom pattern for @cmodel objects', array("@cmodel" => $cmodel['label']));
+            }
+            return $settings;
 
-    default:
-      break;
-  }
+        default:
+            break;
+    }
 }
 
 /**
@@ -96,61 +96,61 @@ function islandora_pathauto_pathauto($op) {
  *   may be >1 if the object has multiple content models.
  */
 function islandora_pathauto_create_alias($object, $op) {
-  module_load_include('inc', 'pathauto');
-  $count = 0;
-  if (islandora_namespace_accessible($object->id)) {
-    $path = 'islandora/object/' . $object->id;
-    // Give priority to any cmodels that are enabled for pathauto.
-    $all_enabled = variable_get('islandora_pathauto_selected_cmodels', array());
-    $models = array_intersect($object->models, $all_enabled);
-    if (!$models) {
-      $models = $object->models;
+    module_load_include('inc', 'pathauto');
+    $count = 0;
+    if (islandora_namespace_accessible($object->id)) {
+        $path = 'islandora/object/' . $object->id;
+        // Give priority to any cmodels that are enabled for pathauto.
+        $all_enabled = variable_get('islandora_pathauto_selected_cmodels', array());
+        $models = array_intersect($object->models, $all_enabled);
+        if (!$models) {
+            $models = $object->models;
+        }
+
+        foreach ($models as $cmodel) {
+            $result = pathauto_create_alias('islandora', $op, $path, array('fedora' => $object), $cmodel);
+            if ($result != '') {
+                $count++;
+            }
+        }
     }
 
-    foreach ($models as $cmodel) {
-      $result = pathauto_create_alias('islandora', $op, $path, array('fedora' => $object), $cmodel);
-      if ($result != '') {
-        $count++;
-      }
-    }
-  }
-
-  return $count;
+    return $count;
 }
 
 /**
  * Implements hook_islandora_object_ingested().
  */
 function islandora_pathauto_islandora_object_ingested($object) {
-  islandora_pathauto_create_alias($object, 'insert');
+    islandora_pathauto_create_alias($object, 'insert');
 }
 
 /**
  * Implements hook_islandora_object_alter().
  */
 function islandora_pathauto_islandora_object_alter($original, $context) {
-  // Skip for new objects. hook_islandora_object_ingested will create the alias.
-  if (isset($context['action']) and $context['action'] == 'ingest') {
-    return;
-  }
-  // If the label is what was modified, then
-  // the $original does not have the new label yet.
-  // This is a nasty fix to get it from $context.
-  // See ISLANDORA-1072.
-  $object = new IslandoraFedoraObjectReadOnly($original);
-  if (isset($context['action']) and $context['action'] == 'modify') {
-    if (isset($context['params']['label'])) {
-      $object->label = $context['params']['label'];
+    // Skip for new objects. hook_islandora_object_ingested will create the alias.
+    if (isset($context['action']) and $context['action'] == 'ingest') {
+        return;
     }
-  }
-  islandora_pathauto_create_alias($object, 'update');
+    // If the label is what was modified, then
+    // the $original does not have the new label yet.
+    // This is a nasty fix to get it from $context.
+    // See ISLANDORA-1072.
+    $object = new IslandoraFedoraObjectReadOnly($original);
+    if (isset($context['action']) and $context['action'] == 'modify') {
+        if (isset($context['params']['label'])) {
+            $object->label = $context['params']['label'];
+        }
+    }
+    islandora_pathauto_create_alias($object, 'update');
 }
 
 /**
  * Implements hook_islandora_object_purged().
  */
 function islandora_pathauto_islandora_object_purged($pid) {
-  pathauto_path_delete_all('islandora/object/' . $pid);
+    pathauto_path_delete_all('islandora/object/' . $pid);
 }
 
 /**
@@ -162,65 +162,64 @@ function islandora_pathauto_islandora_object_purged($pid) {
  *   Batch context.
  */
 function islandora_pathauto_bulk_batch_process($use_cron_last = FALSE, &$context = array()) {
-  module_load_include('inc', 'islandora', 'includes/utilities');
-  $sandbox = &$context['sandbox'];
-  $args = array(
-    '!filters' => '',
-    '!limit' => '',
-    '!md_name' => '',
-    '!md_field' => '',
-  );
-  if (empty($sandbox)) {
-    $sandbox['total'] = 0;
-    $sandbox['total_alias'] = 0;
-    $sandbox['total_processed'] = 0;
-    $sandbox['filters'] = array();
-    $sandbox['filters']['model'] = '';
-    $sandbox['models'] = array();
-    $settings = islandora_pathauto_pathauto('settings');
-    $pattern_all_objects = variable_get('pathauto_' . $settings->module . '_pattern', $settings->patterndefault);
-    // Determine what content models have a pattern and
-    // only query objects with those particular models.
-    if (!empty($pattern_all_objects)) {
-      $sandbox['models'][] = 'fedora-system:FedoraObject-3.0';
-    }
-    elseif (isset($settings->patternitems)) {
-      foreach ($settings->patternitems as $model => $label) {
-        $pattern = variable_get('pathauto_' . $settings->module . '_' . $model . '_pattern', '');
-        if (!empty($pattern)) {
-          $sandbox['models'][] = $model;
+    module_load_include('inc', 'islandora', 'includes/utilities');
+    $sandbox = &$context['sandbox'];
+    $args = array(
+        '!filters' => '',
+        '!limit' => '',
+        '!md_name' => '',
+        '!md_field' => '',
+    );
+    if (empty($sandbox)) {
+        $sandbox['total'] = 0;
+        $sandbox['total_alias'] = 0;
+        $sandbox['total_processed'] = 0;
+        $sandbox['filters'] = array();
+        $sandbox['filters']['model'] = '';
+        $sandbox['models'] = array();
+        $settings = islandora_pathauto_pathauto('settings');
+        $pattern_all_objects = variable_get('pathauto_' . $settings->module . '_pattern', $settings->patterndefault);
+        // Determine what content models have a pattern and
+        // only query objects with those particular models.
+        if (!empty($pattern_all_objects)) {
+            $sandbox['models'][] = 'fedora-system:FedoraObject-3.0';
+        } elseif (isset($settings->patternitems)) {
+            foreach ($settings->patternitems as $model => $label) {
+                $pattern = variable_get('pathauto_' . $settings->module . '_' . $model . '_pattern', '');
+                if (!empty($pattern)) {
+                    $sandbox['models'][] = $model;
+                }
+            }
         }
-      }
+
+        if (empty($sandbox['models'])) {
+            drupal_set_message(t('No patterns exist for Islandora objects.'), 'warning');
+            $context['finished'] = 1;
+            return;
+        }
+
+        $model_filters = $sandbox['models'];
+        foreach ($model_filters as &$filter) {
+            $filter = "sameTerm(?model, <info:fedora/$filter>)";
+        }
+        $sandbox['filters']['model'] = format_string('FILTER(!models)', array('!models' => implode(' || ', $model_filters)));
+        if (variable_get('islandora_namespace_restriction_enforced', FALSE)) {
+            $namespace_array = islandora_get_allowed_namespaces();
+            $namespace_sparql = implode('|', $namespace_array);
+            $sandbox['filters']['ns'] = format_string('FILTER(regex(str(?object), "info:fedora/(!namespaces):"))', array('!namespaces' => $namespace_sparql));
+        }
     }
 
-    if (empty($sandbox['models'])) {
-      drupal_set_message(t('No patterns exist for Islandora objects.'), 'warning');
-      $context['finished'] = 1;
-      return;
+    if ($use_cron_last) {
+        $args['!md_name'] = '?md';
+        $args['!md_field'] = '<info:fedora/fedora-system:def/view#lastModifiedDate> ?md ;';
+        if (!isset($sandbox['filters']['cron_last'])) {
+            $modified_date_time = gmdate("Y-m-d\TH:i:s\Z", variable_get('cron_last'));
+            $sandbox['filters']['cron_last'] = "FILTER(?md > '{$modified_date_time}'^^xsd:dateTime)";
+        }
     }
 
-    $model_filters = $sandbox['models'];
-    foreach ($model_filters as &$filter) {
-      $filter = "sameTerm(?model, <info:fedora/$filter>)";
-    }
-    $sandbox['filters']['model'] = format_string('FILTER(!models)', array('!models' => implode(' || ', $model_filters)));
-    if (variable_get('islandora_namespace_restriction_enforced', FALSE)) {
-      $namespace_array = islandora_get_allowed_namespaces();
-      $namespace_sparql = implode('|', $namespace_array);
-      $sandbox['filters']['ns'] = format_string('FILTER(regex(str(?object), "info:fedora/(!namespaces):"))', array('!namespaces' => $namespace_sparql));
-    }
-  }
-
-  if ($use_cron_last) {
-    $args['!md_name'] = '?md';
-    $args['!md_field'] = '<info:fedora/fedora-system:def/view#lastModifiedDate> ?md ;';
-    if (!isset($sandbox['filters']['cron_last'])) {
-      $modified_date_time = gmdate("Y-m-d\TH:i:s\Z", variable_get('cron_last'));
-      $sandbox['filters']['cron_last'] = "FILTER(?md > '{$modified_date_time}'^^xsd:dateTime)";
-    }
-  }
-
-  $query = <<<EOQ
+    $query = <<<EOQ
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 SELECT ?object ?cd !md_name
 FROM <#ri>
@@ -235,240 +234,251 @@ ORDER BY ?cd
 !limit
 EOQ;
 
-  $tuque = islandora_get_tuque_connection();
-  if ($tuque) {
-    $context['finished'] = 0;
-    if ($sandbox['total'] == 0) {
-      $args['!filters'] = implode(' ', $sandbox['filters']);
-      $query_string = format_string($query, $args);
-      $sandbox['total'] = $tuque->repository->ri->countQuery($query_string, 'sparql');
-      if ($sandbox['total'] == 0) {
-        $context['finished'] = 1;
-        drupal_set_message(t('No objects found for selected models (@models).', array('@models' => implode(', ', $sandbox['models']))));
-        return t('No objects found.');
-      }
-    }
-    if (isset($sandbox['cd'])) {
-      $sandbox['filters']['cd'] = format_string('FILTER(?cd > "!created"^^xsd:dateTime || (?cd = "!created"^^xsd:dateTime && xsd:string(?pid) > "info:fedora/!pid"^^xsd:string))', array(
-        '!created' => $sandbox['cd'],
-        '!pid' => $sandbox['pid'],
-      ));
-    }
-
-    $args['!filters'] = implode(' ', $sandbox['filters']);
-    $args['!limit'] = "LIMIT 50";
-    $query_string = format_string($query, $args);
-
-    $results = $tuque->repository->ri->sparqlQuery($query_string);
-    if (empty($results)) {
-      $context['finished'] = 1;
-    }
-    else {
-      $sandbox['total_processed'] += count($results);
-      foreach ($results as $result) {
-        $pid = $result['object']['value'];
-        $sandbox['cd'] = $result['cd']['value'];
-        $sandbox['pid'] = $pid;
-        $object = islandora_object_load($pid);
-        if ($object) {
-          $alias = islandora_pathauto_create_alias($object, 'bulkupdate');
-          if ($alias != "") {
-            $sandbox['total_alias']++;
-          }
+    $tuque = islandora_get_tuque_connection();
+    if ($tuque) {
+        $context['finished'] = 0;
+        if ($sandbox['total'] == 0) {
+            $args['!filters'] = implode(' ', $sandbox['filters']);
+            $query_string = format_string($query, $args);
+            $sandbox['total'] = $tuque->repository->ri->countQuery($query_string, 'sparql');
+            if ($sandbox['total'] == 0) {
+                $context['finished'] = 1;
+                drupal_set_message(t('No objects found for selected models (@models).', array('@models' => implode(', ', $sandbox['models']))));
+                return t('No objects found.');
+            }
         }
-      }
+        if (isset($sandbox['cd'])) {
+            $sandbox['filters']['cd'] = format_string('FILTER(?cd > "!created"^^xsd:dateTime || (?cd = "!created"^^xsd:dateTime && xsd:string(?pid) > "info:fedora/!pid"^^xsd:string))', array(
+                '!created' => $sandbox['cd'],
+                '!pid' => $sandbox['pid'],
+            ));
+        }
+
+        $args['!filters'] = implode(' ', $sandbox['filters']);
+        $args['!limit'] = "LIMIT 50";
+        $query_string = format_string($query, $args);
+
+        $results = $tuque->repository->ri->sparqlQuery($query_string);
+        if (empty($results)) {
+            $context['finished'] = 1;
+        } else {
+            $sandbox['total_processed'] += count($results);
+            foreach ($results as $result) {
+                $pid = $result['object']['value'];
+                $sandbox['cd'] = $result['cd']['value'];
+                $sandbox['pid'] = $pid;
+                $object = islandora_object_load($pid);
+                if ($object) {
+                    
+                    if (function_exists('islandora_path_load_autoaurl_state')) {
+                        if (!islandora_path_load_autoaurl_state($object->id)) {
+                            # If this is a unique url, we don't want to overwrite
+                            # it so we will just skip that object
+                            continue;
+                        }
+                    }
+                    $alias = islandora_pathauto_create_alias($object, 'bulkupdate');
+                    if ($alias != "") {
+                        $sandbox['total_alias'] ++;
+                    }
+                }
+            }
+        }
     }
-  }
-  $context['message'] = t('Processed @total_processed of @total. Added @total_alias aliases.', array(
-    '@total_processed' => $sandbox['total_processed'],
-    '@total_alias' => $sandbox['total_alias'],
-    '@total' => $sandbox['total']));
-  if ($context['finished'] == 1) {
-    drupal_set_message(t('Added @total_alias aliases on @total_processed PIDs.', array('@total_alias' => $sandbox['total_alias'], '@total_processed' => $sandbox['total_processed'])));
-  }
+    $context['message'] = t('Processed @total_processed of @total. Added @total_alias aliases.', array(
+        '@total_processed' => $sandbox['total_processed'],
+        '@total_alias' => $sandbox['total_alias'],
+        '@total' => $sandbox['total']));
+    if ($context['finished'] == 1) {
+        drupal_set_message(t('Added @total_alias aliases on @total_processed PIDs.', array('@total_alias' => $sandbox['total_alias'], '@total_processed' => $sandbox['total_processed'])));
+    }
 }
 
 /**
  * Implements hook_path_alias_types().
  */
 function islandora_pathauto_path_alias_types() {
-  $objects['islandora/object/'] = t('Islandora');
-  return $objects;
+    $objects['islandora/object/'] = t('Islandora');
+    return $objects;
 }
 
 /**
  * Implements hook_token_info().
  */
 function islandora_pathauto_token_info() {
-  $info['types']['fedora'] = array(
-    'name' => 'Fedora object tokens',
-    'description' => t('Tokens for islandora relating to fedora objects'),
-    'needs-data' => 'fedora',
-  );
-  $info['tokens']['fedora']['pid'] = array(
-    'name' => t('Object PID'),
-    'description' => t('Full PID of object in Fedora repository'),
-  );
-  $info['tokens']['fedora']['label'] = array(
-    'name' => t('Object label'),
-    'description' => t('Fedora object label'),
-  );
-  $info['tokens']['fedora']['shortpid'] = array(
-    'name' => t('Short PID'),
-    'description' => t('Fedora object pid without namespace'),
-  );
-  $info['tokens']['fedora']['namespace'] = array(
-    'name' => t('Namespace'),
-    'description' => t('Fedora object namespace'),
-  );
-  return $info;
+    $info['types']['fedora'] = array(
+        'name' => 'Fedora object tokens',
+        'description' => t('Tokens for islandora relating to fedora objects'),
+        'needs-data' => 'fedora',
+    );
+    $info['tokens']['fedora']['pid'] = array(
+        'name' => t('Object PID'),
+        'description' => t('Full PID of object in Fedora repository'),
+    );
+    $info['tokens']['fedora']['label'] = array(
+        'name' => t('Object label'),
+        'description' => t('Fedora object label'),
+    );
+    $info['tokens']['fedora']['shortpid'] = array(
+        'name' => t('Short PID'),
+        'description' => t('Fedora object pid without namespace'),
+    );
+    $info['tokens']['fedora']['namespace'] = array(
+        'name' => t('Namespace'),
+        'description' => t('Fedora object namespace'),
+    );
+    return $info;
 }
 
 /**
  * Implements hook_tokens().
  */
 function islandora_pathauto_tokens($type, $tokens, array $data = array(), array $options = array()) {
-  if ($type == 'fedora' & !empty($data['fedora'])) {
-    $object = $data['fedora'];
-    $replacements = array();
-    foreach ($tokens as $name => $original) {
-      if ($name == 'pid') {
-        $replacements[$original] = $object->id;
-      }
-      if ($name == 'shortpid') {
-        $temp = explode(':', $object->id, 2);
-        $replacements[$original] = $temp[1];
-      }
-      if ($name == 'namespace') {
-        $temp = explode(':', $object->id, 2);
-        $replacements[$original] = $temp[0];
-      }
-      if ($name == 'label') {
-        $replacements[$original] = $object->label;
-      }
+    if ($type == 'fedora' & !empty($data['fedora'])) {
+        $object = $data['fedora'];
+        $replacements = array();
+        foreach ($tokens as $name => $original) {
+            if ($name == 'pid') {
+                $replacements[$original] = $object->id;
+            }
+            if ($name == 'shortpid') {
+                $temp = explode(':', $object->id, 2);
+                $replacements[$original] = $temp[1];
+            }
+            if ($name == 'namespace') {
+                $temp = explode(':', $object->id, 2);
+                $replacements[$original] = $temp[0];
+            }
+            if ($name == 'label') {
+                $replacements[$original] = $object->label;
+            }
+        }
+        return $replacements;
     }
-    return $replacements;
-  }
-  return array();
+    return array();
 }
 
 class IslandoraFedoraObjectReadOnly implements ArrayAccess {
-  private $fake;
-  private $savedLabel;
 
-  /**
-   * IslandoraFedoraObjectReadOnly constructor.
-   *
-   * @param FedoraObject $original
-   *   The FedoraObject for which this class is a wrapper.
-   */
-  public function __construct($original) {
-    $this->fake = $original;
-    $this->savedLabel = $original->label;
-  }
+    private $fake;
+    private $savedLabel;
 
-  /**
-   * Overload assignment to set label and nothing else.
-   *
-   * @param string $name
-   *   The name of the property being set. Only 'label' will have any effect.
-   * @param mixed $value
-   *   The value to which the property should be set.
-   */
-  public function __set($name, $value) {
-    if ($name == 'label') {
-      $this->savedLabel = $value;
+    /**
+     * IslandoraFedoraObjectReadOnly constructor.
+     *
+     * @param FedoraObject $original
+     *   The FedoraObject for which this class is a wrapper.
+     */
+    public function __construct($original) {
+        $this->fake = $original;
+        $this->savedLabel = $original->label;
     }
-  }
 
-  /**
-   * Overload get to pull values from original object (except for label).
-   *
-   * @param string $name
-   *   The name of the property to get.
-   *
-   * @return string|void
-   *   Returns the value of the property.
-   */
-  public function __get($name) {
-    if ($name == 'label') {
-      return $this->savedLabel;
+    /**
+     * Overload assignment to set label and nothing else.
+     *
+     * @param string $name
+     *   The name of the property being set. Only 'label' will have any effect.
+     * @param mixed $value
+     *   The value to which the property should be set.
+     */
+    public function __set($name, $value) {
+        if ($name == 'label') {
+            $this->savedLabel = $value;
+        }
     }
-    return $this->fake->__get($name);
-  }
 
-  /**
-   * Implements ArrayAccess.
-   */
-  public function offsetExists($offset) {
-    return isset($this->fake[$offset]);
-  }
+    /**
+     * Overload get to pull values from original object (except for label).
+     *
+     * @param string $name
+     *   The name of the property to get.
+     *
+     * @return string|void
+     *   Returns the value of the property.
+     */
+    public function __get($name) {
+        if ($name == 'label') {
+            return $this->savedLabel;
+        }
+        return $this->fake->__get($name);
+    }
 
-  /**
-   * Implements ArrayAccess.
-   */
-  public function offsetGet($offset) {
-    return $this->fake[$offset];
-  }
+    /**
+     * Implements ArrayAccess.
+     */
+    public function offsetExists($offset) {
+        return isset($this->fake[$offset]);
+    }
 
-  /**
-   * Implements ArrayAccess.
-   */
-  public function offsetSet($offset, $value) {}
+    /**
+     * Implements ArrayAccess.
+     */
+    public function offsetGet($offset) {
+        return $this->fake[$offset];
+    }
 
-  /**
-   * Implements ArrayAccess.
-   */
-  public function offsetUnset($offset) {}
+    /**
+     * Implements ArrayAccess.
+     */
+    public function offsetSet($offset, $value) {
+        
+    }
+
+    /**
+     * Implements ArrayAccess.
+     */
+    public function offsetUnset($offset) {
+        
+    }
+
 }
 
 /**
  * Implements hook_cron().
  */
 function islandora_pathauto_cron() {
-  if (variable_get('islandora_pathauto_use_cron', FALSE)) {
-    batch_set(array(
-      'title' => t('Islandora Pathauto cron bulk updating URL aliases'),
-      'operations' => array(
-        array('islandora_pathauto_bulk_batch_process', array(TRUE)),
-      ),
-    ));
+    if (variable_get('islandora_pathauto_use_cron', FALSE)) {
+        batch_set(array(
+            'title' => t('Islandora Pathauto cron bulk updating URL aliases'),
+            'operations' => array(
+                array('islandora_pathauto_bulk_batch_process', array(TRUE)),
+            ),
+        ));
 
-    // This is a hack around the broken batch API.
-    // https://drupal.org/node/638712#comment-2289138
-    $batch =& batch_get();
-    $batch['progressive'] = FALSE;
-    batch_process();
-  }
+        // This is a hack around the broken batch API.
+        // https://drupal.org/node/638712#comment-2289138
+        $batch = & batch_get();
+        $batch['progressive'] = FALSE;
+        batch_process();
+    }
 }
 
 /**
  * Pathauto bulk update callback.
  */
 function islandora_pathauto_pathauto_bulkupdate(&$context) {
-  return islandora_pathauto_bulk_batch_process(FALSE, $context);
+    return islandora_pathauto_bulk_batch_process(FALSE, $context);
 }
 
 /**
  * Load Islandora Objects Pathauto Table which allows for objects with unique
  * urls to stay unique (similar functionaltiy as path module).
  */
-function islandora_pathauto_load_pathauto_objects(){
+function islandora_pathauto_load_pathauto_objects() {
     $results = [];
-    if(db_table_exists('islandora_pathauto_state')){
-        #$results = db_query('SELECT object_id , pathauto_state FROM FROM {islandora_pathauto_state}');
-    }
-    else{
+    if (db_table_exists('islandora_pathauto_state')) {
+        $results = db_query('SELECT object_id , pathauto_state FROM FROM {islandora_pathauto_state}');
+    } else {
         _islandora_pathauto_create_pathauto_state();
         $results = [];
     }
     return $results;
-    
 }
 
 /**
  * Create Islandora_pathauto_state table to see if this url can be replaced
  */
-function _islandora_pathauto_create_pathauto_state(){
+function _islandora_pathauto_create_pathauto_state() {
     #TODO: Create a table
 }
