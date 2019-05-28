@@ -19,7 +19,6 @@ function islandora_pathauto_admin_settings(array $form, array &$form_state) {
   };
 
   module_load_include('inc', 'islandora', 'includes/utilities');
-  drupal_add_css(drupal_get_path('module', 'islandora_image_annotation') . '/css/islandora_annotation.css');
   $all_cmodels = islandora_get_content_models();
   $already_chosen = variable_get('islandora_pathauto_selected_cmodels', array());
 
@@ -77,6 +76,12 @@ function islandora_pathauto_admin_settings(array $form, array &$form_state) {
     '#default_value' => $already_chosen,
   );
 
+  $form['use_cron'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Use cron to automatically add / update aliases.'),
+    '#default_value' => variable_get('islandora_pathauto_use_cron', FALSE),
+  );
+
   $form['actions'] = array(
     '#type' => 'actions',
   );
@@ -96,8 +101,8 @@ function islandora_pathauto_admin_settings_submit($form, &$form_state) {
   $enabled = array_filter($form_state['values']['pathauto_table']['enabled']);
   variable_set('islandora_pathauto_selected_cmodels', array_keys($enabled));
   variable_set('islandora_pathauto_query_language', $form_state['values']['query_language']);
+  variable_set('islandora_pathauto_use_cron', $form_state['values']['use_cron']);
 }
-
 
 /**
  * Themes the form table.
